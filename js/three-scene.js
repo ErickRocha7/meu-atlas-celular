@@ -3,9 +3,6 @@ import { CellLayoutEngine } from './cell-layout-engine.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-// --------------------------------------------------------------
-// Configuração declarativa dos tipos de célula (corpo)
-// --------------------------------------------------------------
 const CELL_TEMPLATES = {
     Animalia: {
         body: {
@@ -15,10 +12,7 @@ const CELL_TEMPLATES = {
             emissive: 0x224466,
             transparent: true,
             opacity: 0.85
-        },
-        organelleColors: [0xff6666, 0x66ff66, 0xffaa66, 0xff66ff, 0x66ffff],
-        organelleRadius: 0.18,
-        organelleCountOffset: 0
+        }
     },
     Plantae: {
         body: {
@@ -28,16 +22,10 @@ const CELL_TEMPLATES = {
             emissive: 0x336600,
             transparent: true,
             opacity: 0.7
-        },
-        organelleColors: [0x88ff88, 0xffaa66, 0xff8888, 0x88aaff],
-        organelleRadius: 0.2,
-        organelleCountOffset: 1
+        }
     }
 };
 
-// --------------------------------------------------------------
-// Templates visuais para organelas (geometria, material)
-// --------------------------------------------------------------
 const ORGANELLE_TEMPLATES = {
     nucleus: {
         geometry: { type: 'SphereGeometry', params: [0.35, 32, 32] },
@@ -107,6 +95,7 @@ export class ThreeSceneManager {
         this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         this.renderer.shadowMap.enabled = true;
+        this.renderer.localClippingEnabled = true;   // Habilita planos de corte locais
         this.container.appendChild(this.renderer.domElement);
 
         this.controls = new OrbitControls(this.camera, this.renderer.domElement);
@@ -120,8 +109,13 @@ export class ThreeSceneManager {
         this.loader = new GLTFLoader();
         this.currentModel = null;
         this.meshesMap = new Map();
+        this.organelleMeshMap = new Map();
+        this.isFallback = false;
         this.clippingPlanes = [];
         this.animationId = null;
+
+        // Guarda a referência da função de resize para poder removê-la depois
+        this._resizeHandler = () => this.forceResize();   // 👈 novo
 
         this.setupLights();
         this.setupResizeHandler();
@@ -149,14 +143,18 @@ export class ThreeSceneManager {
     }
 
     setupResizeHandler() {
-        window.addEventListener('resize', () => {
-            if (!this.container) return;
-            const width = this.container.clientWidth;
-            const height = this.container.clientHeight;
-            this.camera.aspect = width / height;
-            this.camera.updateProjectionMatrix();
-            this.renderer.setSize(width, height);
-        });
+        window.addEventListener('resize', this._resizeHandler);   // 👈 usa a referência guardada
+    }
+
+    // Método público para forçar o redimensionamento (útil no modo comparação)
+    forceResize() {
+        if (!this.container) return;
+        const width = this.container.clientWidth;
+        const height = this.container.clientHeight;
+        if (width === 0 || height === 0) return;
+        this.camera.aspect = width / height;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(width, height);
     }
 
     startAnimationLoop() {
@@ -173,62 +171,69 @@ export class ThreeSceneManager {
             if (this.currentModel) {
                 this.scene.remove(this.currentModel);
                 this.disposeModel(this.currentModel);
+                this.currentModel = null;
             }
+            this.meshesMap.clear();
+            this.organelleMeshMap.clear();
+            this.isFallback = false;
 
-            this.loader.load(url, (gltf) => {
-                this.currentModel = gltf.scene;
-                this.meshesMap.clear();
-
-                // 🔍 VALIDAÇÃO DE MISMATCH (Resolver)
-                const gltfMeshNames = new Set();
-                this.currentModel.traverse((child) => {
-                    if (child.isMesh && child.name) {
-                        gltfMeshNames.add(child.name);
-                    }
-                });
-                organelasList.forEach(org => {
-                    if (!gltfMeshNames.has(org.mesh_name)) {
-                        console.warn(`[Mismatch] Organela '${org.id}' com mesh_name '${org.mesh_name}' não encontrada no modelo GLB.`);
-                    }
-                });
-
-                // Processamento padrão (metadados, adição à cena)
-                this.currentModel.traverse((child) => {
-                    if (child.isMesh) {
-                        child.castShadow = true;
-                        child.receiveShadow = false;
-                        if (child.material) child.material.side = THREE.DoubleSide;
-                        if (child.name) {
-                            if (!child.userData.source) child.userData.source = 'gltf';
-                            this.meshesMap.set(child.name, child);
-                        }
-                    }
-                });
-
-                this.scene.add(this.currentModel);
-                if (this.clippingPlanes.length > 0) this.applyClippingPlanesToModel(this.currentModel);
-                resolve(gltf);
-            }, undefined, (error) => {
-                console.warn(`[Fallback] Não foi possível carregar ${url} para célula ${cellId}. Erro: ${error.message}. Gerando modelo substituto.`);
-                const fallbackGroup = this.createFallbackModel(organelasList, cellId, cellType);
-                this.currentModel = fallbackGroup;
-                this.scene.add(this.currentModel);
-                if (this.clippingPlanes.length > 0) this.applyClippingPlanesToModel(this.currentModel);
-                resolve({ scene: fallbackGroup, animations: [] });
-            });
+            this.loader.load(url,
+                (gltf) => {
+                    this.currentModel = gltf.scene;
+                    this.isFallback = false;
+                    this._processGLTFModel(organelasList);
+                    this.scene.add(this.currentModel);
+                    if (this.clippingPlanes.length > 0) this.applyClippingPlanesToModel(this.currentModel);
+                    resolve({ usedFallback: false });
+                },
+                undefined,
+                (error) => {
+                    console.warn(`[Fallback] Não foi possível carregar ${url}: ${error.message}. Gerando modelo substituto.`);
+                    const fallbackGroup = this.createFallbackModel(organelasList, cellId, cellType);
+                    this.currentModel = fallbackGroup;
+                    this.isFallback = true;
+                    this._processFallbackOrganelleMap(organelasList);
+                    this.scene.add(this.currentModel);
+                    if (this.clippingPlanes.length > 0) this.applyClippingPlanesToModel(this.currentModel);
+                    resolve({ usedFallback: true });
+                }
+            );
         });
     }
 
-    /**
-     * Cria o modelo fallback usando o CellLayoutEngine e templates visuais.
-     * O manifesto gerado pelo engine define posições (fixas para núcleo/vacúolo, aleatórias para as demais).
-     */
+    _processGLTFModel(organelasList) {
+        this.currentModel.traverse((child) => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = false;
+                if (child.material) child.material.side = THREE.DoubleSide;
+                if (child.name) {
+                    child.userData.source = 'gltf';
+                    this.meshesMap.set(child.name, child);
+                }
+            }
+        });
+
+        // Mapeamento flexível com includes() e case insensitive
+        organelasList.forEach(org => {
+            const names = [];
+            const target = org.mesh_name.toLowerCase();
+            this.meshesMap.forEach((mesh, name) => {
+                if (name.toLowerCase().includes(target)) {
+                    names.push(name);
+                }
+            });
+            if (names.length > 0) {
+                this.organelleMeshMap.set(org.id, names);
+            }
+        });
+    }
+
     createFallbackModel(organelasList, cellId, cellType = 'Animalia') {
         const group = new THREE.Group();
         group.userData = { isFallback: true, cellId, cellType };
         this.meshesMap.clear();
 
-        // 1. Corpo da célula (conforme CELL_TEMPLATES)
         const template = CELL_TEMPLATES[cellType] || CELL_TEMPLATES.Animalia;
         let bodyGeometry;
         switch (template.body.geometry) {
@@ -257,40 +262,31 @@ export class ThreeSceneManager {
         group.add(bodyMesh);
         this.meshesMap.set("cell_body", bodyMesh);
 
-        // 2. Gerar manifesto de layout via CellLayoutEngine
         const manifest = CellLayoutEngine.generateSceneManifest(organelasList, cellType);
 
-        // 3. Para cada item do manifesto, instanciar a organela usando ORGANELLE_TEMPLATES
         manifest.forEach(item => {
             const orgTemplate = ORGANELLE_TEMPLATES[item.id] || ORGANELLE_TEMPLATES.Default;
-
-            // Construtor da geometria
             const GeomConstructor = THREE[orgTemplate.geometry.type];
             if (!GeomConstructor) {
-                console.warn(`Tipo de geometria desconhecido: ${orgTemplate.geometry.type}`);
+                console.warn(`Geometria desconhecida: ${orgTemplate.geometry.type}`);
                 return;
             }
             const geometry = new GeomConstructor(...orgTemplate.geometry.params);
-
             const material = new THREE.MeshStandardMaterial({
                 ...orgTemplate.material,
                 side: THREE.DoubleSide
             });
-
             const mesh = new THREE.Mesh(geometry, material);
             mesh.name = item.meshName;
             mesh.position.set(item.position[0], item.position[1], item.position[2]);
             mesh.rotation.set(item.rotation[0], item.rotation[1], item.rotation[2]);
             mesh.castShadow = true;
-
             if (orgTemplate.geometry.scale) {
                 mesh.scale.set(...orgTemplate.geometry.scale);
             }
             if (item.scale) {
                 mesh.scale.set(...item.scale);
             }
-
-            // Metadados unificados
             mesh.userData = {
                 organelleId: item.id,
                 type: item.meshName,
@@ -298,13 +294,27 @@ export class ThreeSceneManager {
                 descricao: item.description,
                 layoutGroup: item.layoutGroup
             };
-
             group.add(mesh);
             this.meshesMap.set(mesh.name, mesh);
         });
 
-        console.log(`[Fallback] Modelo gerado para ${cellId} (${cellType}) com ${this.meshesMap.size} malhas (${manifest.length} organelas).`);
+        console.log(`[Fallback] Modelo gerado para ${cellId} (${cellType}) com ${this.meshesMap.size} malhas.`);
         return group;
+    }
+
+    _processFallbackOrganelleMap(organelasList) {
+        this.organelleMeshMap.clear();
+        organelasList.forEach(org => {
+            const names = [];
+            this.meshesMap.forEach((mesh, name) => {
+                if (mesh.userData.organelleId === org.id) {
+                    names.push(name);
+                }
+            });
+            if (names.length > 0) {
+                this.organelleMeshMap.set(org.id, names);
+            }
+        });
     }
 
     disposeModel(model) {
@@ -313,7 +323,16 @@ export class ThreeSceneManager {
                 child.geometry.dispose();
                 if (child.material) {
                     const materials = Array.isArray(child.material) ? child.material : [child.material];
-                    materials.forEach(mat => mat.dispose());
+                    materials.forEach(mat => {
+                        // Libera texturas associadas (map, normalMap, etc.) se existirem
+                        for (const key in mat) {
+                            const value = mat[key];
+                            if (value && value.isTexture) {
+                                value.dispose();        // 👈 evita vazamento futuro de texturas
+                            }
+                        }
+                        mat.dispose();
+                    });
                 }
             }
         });
@@ -325,6 +344,7 @@ export class ThreeSceneManager {
                 const materials = Array.isArray(child.material) ? child.material : [child.material];
                 materials.forEach(mat => {
                     mat.clippingPlanes = this.clippingPlanes;
+                    mat.needsUpdate = true;   // Garante recompilação do shader após alterar planos de corte
                 });
             }
         });
@@ -342,12 +362,14 @@ export class ThreeSceneManager {
         }
     }
 
-    isolateOrganelle(meshName) {
+    isolateOrganelle(organelleId) {
         if (!this.currentModel) return;
+        const targetNames = this.organelleMeshMap.get(organelleId) || [];
+        const targetSet = new Set(targetNames);
+
         this.currentModel.traverse((child) => {
             if (child.isMesh) {
-                // Por simplicidade, isola apenas o nome exato (sem prefixo)
-                child.visible = (child.name === meshName);
+                child.visible = targetSet.has(child.name);
             }
         });
     }
@@ -380,6 +402,9 @@ export class ThreeSceneManager {
 
     dispose() {
         if (this.animationId) cancelAnimationFrame(this.animationId);
+        if (this._resizeHandler) {
+            window.removeEventListener('resize', this._resizeHandler);   // 👈 remove o listener de resize
+        }
         if (this.currentModel) {
             this.disposeModel(this.currentModel);
             this.scene.remove(this.currentModel);

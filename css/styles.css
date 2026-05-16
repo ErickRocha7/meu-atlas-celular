@@ -8,6 +8,14 @@
     --border: #e2e8f0;
     --radius: 16px;
     --shadow: 0 8px 20px rgba(0,0,0,0.03), 0 2px 4px rgba(0,0,0,0.05);
+
+    /* Escala de z-index */
+    --z-base: 1;
+    --z-sidebar: 10;
+    --z-sidebar-mobile: 200;
+    --z-overlay: 1000;
+    --z-overlay-exit: 1001;
+    --z-loader: 9999;
 }
 
 * {
@@ -20,7 +28,7 @@ body {
     font-family: 'Inter', sans-serif;
     background: var(--bg-app);
     color: var(--text-primary);
-    height: 100vh;
+    height: 100dvh;          /* dynamic viewport height – melhor em mobile */
     overflow: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -30,7 +38,7 @@ body {
 .app-container {
     display: grid;
     grid-template-columns: 280px 1fr 300px;
-    height: 100vh;
+    height: 100dvh;          /* acompanha o body */
     gap: 0;
     background: var(--bg-app);
 }
@@ -46,14 +54,14 @@ body {
     border-right: 1px solid var(--border);
     border-radius: 0 var(--radius) var(--radius) 0;
     margin-right: 0;
-    z-index: 10;
+    z-index: var(--z-sidebar);
 }
 
 .sidebar-right {
     border-left: 1px solid var(--border);
     border-radius: var(--radius) 0 0 var(--radius);
     margin-left: 0;
-    z-index: 10;
+    z-index: var(--z-sidebar);
 }
 
 .main-content {
@@ -88,7 +96,28 @@ body {
     border-radius: var(--radius);
     overflow: hidden;
     box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05), 0 4px 12px rgba(0,0,0,0.02);
-    z-index: 1;
+    z-index: var(--z-base);
+}
+
+/* Canvas específico (não afeta outros <canvas> que possam existir) */
+.canvas-container canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.fallback-indicator {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    background: rgba(255, 193, 7, 0.9);
+    color: #1e293b;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    z-index: var(--z-sidebar);   /* mesmo nível das sidebars */
+    pointer-events: none;
 }
 
 /* Sidebar esquerda - lista de células */
@@ -190,9 +219,15 @@ body {
     gap: 8px;
 }
 
-.btn:hover {
+.btn:hover:not(:disabled) {
     background: #f8fafc;
     border-color: #cbd5e1;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #f1f5f9;
 }
 
 .btn-download {
@@ -247,7 +282,7 @@ body {
     width: 100%;
     height: 100%;
     background: var(--bg-app);
-    z-index: 1000;
+    z-index: var(--z-overlay);
 }
 
 .compare-container {
@@ -314,13 +349,41 @@ body {
     padding: 12px 24px;
     font-weight: 600;
     cursor: pointer;
-    z-index: 1001;
+    z-index: var(--z-overlay-exit);
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     transition: all 0.2s;
 }
 
 .exit-compare-btn:hover {
     background: #0f172a;
+}
+
+/* Overlay de carregamento (global) */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(245, 247, 251, 0.8);
+    backdrop-filter: blur(4px);
+    z-index: var(--z-loader);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid var(--border);
+    border-top: 4px solid var(--accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 
 /* Responsividade */
@@ -341,7 +404,7 @@ body {
         top: 0;
         bottom: 0;
         width: 260px;
-        z-index: 200;
+        z-index: var(--z-sidebar-mobile);
         transition: transform 0.3s ease;
         border-radius: 0;
     }
@@ -363,7 +426,6 @@ body {
         display: block;
     }
     .compare-container {
-        flex-direction: column;
         grid-template-columns: 1fr;
     }
     .pane-header {
@@ -371,13 +433,12 @@ body {
     }
 }
 
-/* ============================================
-   CORREÇÕES CRÍTICAS DE RENDERIZAÇÃO
-   ============================================ */
-canvas {
-    width: 100% !important;
-    height: 100% !important;
-    display: block;
+/* Garante que classes .open não afetem o layout em desktop */
+@media (min-width: 769px) {
+    .sidebar-left.open,
+    .sidebar-right.open {
+        transform: none;        /* neutraliza qualquer transform residual */
+    }
 }
 
 button, select {

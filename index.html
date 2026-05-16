@@ -8,13 +8,18 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600&display=swap" rel="stylesheet">
 </head>
 <body>
+    <!-- Overlay de carregamento global -->
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="spinner"></div>
+    </div>
+
     <!-- Layout principal 3 colunas -->
     <div class="app-container">
         <!-- Sidebar Esquerda: Tipos de Células -->
         <aside class="sidebar-left">
             <div class="sidebar-header">
                 <h2>📚 CELL ATLAS</h2>
-                <button id="mobile-menu-left" class="mobile-menu-btn">☰</button>
+                <button id="mobile-menu-left" class="mobile-menu-btn" aria-label="Abrir menu">☰</button>
             </div>
             <ul id="cell-list">
                 <!-- Preenchido dinamicamente via JS -->
@@ -27,7 +32,9 @@
                 <h1 id="current-cell-name">Animal Cell</h1>
                 <p id="current-cell-type">Eukaryotic Cell</p>
             </header>
-            <div id="canvas-container" class="canvas-container"></div>
+            <div id="canvas-container" class="canvas-container">
+                <div id="fallback-indicator" class="fallback-indicator" style="display: none;">⚠️ Modelo alternativo (procedural)</div>
+            </div>
         </main>
 
         <!-- Sidebar Direita: Controles e Informações -->
@@ -45,7 +52,7 @@
                 <button id="btn-rotate" class="btn">↻ Rotate (Auto)</button>
                 <button id="btn-isolate" class="btn">🔍 Isolate Organelle</button>
                 <button id="btn-reset" class="btn">⟲ Reset View</button>
-                <button id="btn-glb" class="btn btn-download">💾 Download GLB</button>
+                <button id="btn-glb" class="btn btn-download" title="Fazer download do modelo GLB">💾 Download GLB</button>
                 <button id="btn-compare" class="btn btn-compare">🔬 Compare Cells</button>
             </div>
 
@@ -60,7 +67,7 @@
 
             <div class="control-box">
                 <h3>🧬 ORGANELLES</h3>
-                <select id="organelle-select">
+                <select id="organelle-select" aria-label="Selecionar organela">
                     <option value="">Select an organelle...</option>
                 </select>
                 <p id="organelle-desc" class="desc-text"></p>
@@ -73,15 +80,15 @@
         <div class="compare-container">
             <div class="compare-pane left-pane">
                 <div class="pane-header">
-                    <select id="compare-left-select" class="compare-select"></select>
-                    <button class="sync-cam-btn" data-side="left">🔗 Sync Left</button>
+                    <select id="compare-left-select" class="compare-select" aria-label="Célula esquerda"></select>
+                    <button class="sync-cam-btn" data-side="left" title="Sincronizar câmera a partir da esquerda">🔗 Sync Left</button>
                 </div>
                 <div id="canvas-left" class="compare-canvas"></div>
             </div>
             <div class="compare-pane right-pane">
                 <div class="pane-header">
-                    <select id="compare-right-select" class="compare-select"></select>
-                    <button class="sync-cam-btn" data-side="right">🔗 Sync Right</button>
+                    <select id="compare-right-select" class="compare-select" aria-label="Célula direita"></select>
+                    <button class="sync-cam-btn" data-side="right" title="Sincronizar câmera a partir da direita">🔗 Sync Right</button>
                 </div>
                 <div id="canvas-right" class="compare-canvas"></div>
             </div>
@@ -89,11 +96,12 @@
         <button id="exit-compare" class="exit-compare-btn">✖ Exit Comparison</button>
     </div>
 
+    <!-- Import map atualizado para Three.js r157 -->
     <script type="importmap">
         {
             "imports": {
-                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+                "three": "https://unpkg.com/three@0.157.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.157.0/examples/jsm/"
             }
         }
     </script>
