@@ -1,5 +1,3 @@
-import { AppState } from '../state.js';
-
 const dom = {};
 
 function cacheDOM() {
@@ -32,8 +30,8 @@ function cacheDOM() {
 }
 
 export function updateCellHeader(cell) {
-    if (dom.currentCellName) dom.currentCellName.innerText = cell.nome;
-    if (dom.currentCellType) dom.currentCellType.innerText = cell.tipo;
+    if (dom.currentCellName) dom.currentCellName.textContent = cell.nome;
+    if (dom.currentCellType) dom.currentCellType.textContent = cell.tipo;
 }
 
 export function updateMicroscopyImages(imagens) {
@@ -60,7 +58,7 @@ export function populateOrganelleDropdown(organelas) {
 }
 
 export function updateOrganelleDesc(text = '') {
-    if (dom.organelleDesc) dom.organelleDesc.innerText = text;
+    if (dom.organelleDesc) dom.organelleDesc.textContent = text;
 }
 
 export function setFallbackIndicator(show) {
@@ -103,7 +101,6 @@ export function populateCompareSelects(celulas) {
     });
 }
 
-// Novas funções para o loader
 export function showLoading() {
     if (dom.loadingOverlay) dom.loadingOverlay.style.display = 'flex';
 }

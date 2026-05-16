@@ -28,7 +28,7 @@ body {
     font-family: 'Inter', sans-serif;
     background: var(--bg-app);
     color: var(--text-primary);
-    height: 100dvh;          /* dynamic viewport height – melhor em mobile */
+    height: 100dvh;
     overflow: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -38,7 +38,7 @@ body {
 .app-container {
     display: grid;
     grid-template-columns: 280px 1fr 300px;
-    height: 100dvh;          /* acompanha o body */
+    height: 100dvh;
     gap: 0;
     background: var(--bg-app);
 }
@@ -116,7 +116,7 @@ body {
     border-radius: 20px;
     font-size: 0.75rem;
     font-weight: 500;
-    z-index: var(--z-sidebar);   /* mesmo nível das sidebars */
+    z-index: var(--z-sidebar);
     pointer-events: none;
 }
 
@@ -437,7 +437,7 @@ body {
 @media (min-width: 769px) {
     .sidebar-left.open,
     .sidebar-right.open {
-        transform: none;        /* neutraliza qualquer transform residual */
+        transform: none;
     }
 }
 

@@ -1,4 +1,4 @@
-import { AppState } from './state.js';
+import { AppState, CompareState, GlobalListeners } from './state.js';
 import { cacheDOM, getDOM } from './controllers/UIController.js';
 import { initMainScene, loadCellData, loadCell } from './controllers/CellController.js';
 import { enterCompareMode, exitCompareMode } from './controllers/CompareController.js';
@@ -48,18 +48,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (dom.btnIsolate && dom.organelleSelect) {
         dom.btnIsolate.addEventListener('click', () => {
             const cell = AppState.currentCell;
-            if (!cell) return;
+            if (!cell) {
+                UIController.updateOrganelleDesc('Selecione uma célula primeiro.');
+                return;
+            }
             const selectedOrgId = dom.organelleSelect.value;
             if (!selectedOrgId) {
-                alert('Selecione uma organela primeiro.');
+                UIController.updateOrganelleDesc('Selecione uma organela primeiro.');
                 return;
             }
             const organela = cell.organelas.find(o => o.id === selectedOrgId);
             if (organela) {
                 AppState.mainScene.isolateOrganelle(organela.id);
-                dom.organelleDesc.innerText = organela.descricao;
+                dom.organelleDesc.textContent = organela.descricao;
             } else {
-                alert('Organela não encontrada nos dados.');
+                UIController.updateOrganelleDesc('Organela não encontrada.');
             }
         });
     }
@@ -70,9 +73,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             const cell = AppState.currentCell;
             if (orgId && cell) {
                 const organela = cell.organelas.find(o => o.id === orgId);
-                if (organela) dom.organelleDesc.innerText = organela.descricao;
+                if (organela) dom.organelleDesc.textContent = organela.descricao;
             } else {
-                dom.organelleDesc.innerText = '';
+                dom.organelleDesc.textContent = '';
                 AppState.mainScene.resetVisibility();
             }
         });
@@ -109,12 +112,12 @@ function setupMobileMenus(dom) {
     };
 
     dom.mobileMenuLeft.addEventListener('click', toggleLeft);
-    AppState._listeners.mobileLeft = toggleLeft;
+    GlobalListeners.mobileLeft = toggleLeft;
 
     const closeAll = () => {
         dom.sidebarLeft.classList.remove('open');
         dom.sidebarRight.classList.remove('open');
     };
     dom.canvasContainer.addEventListener('click', closeAll);
-    AppState._listeners.canvasClick = closeAll;
+    GlobalListeners.canvasClick = closeAll;
 }

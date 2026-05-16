@@ -87,15 +87,16 @@ export class ThreeSceneManager {
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0xfafcff);
 
-        const aspect = this.container.clientWidth / this.container.clientHeight;
-        this.camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 1000);
+        const width = this.container.clientWidth || 1;
+        const height = this.container.clientHeight || 1;
+        this.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
         this.camera.position.set(3, 2, 5);
 
         this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-        this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
+        this.renderer.setSize(width, height);
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         this.renderer.shadowMap.enabled = true;
-        this.renderer.localClippingEnabled = true;   // Habilita planos de corte locais
+        this.renderer.localClippingEnabled = true;
         this.container.appendChild(this.renderer.domElement);
 
         this.controls = new OrbitControls(this.camera, this.renderer.domElement);
@@ -113,13 +114,14 @@ export class ThreeSceneManager {
         this.isFallback = false;
         this.clippingPlanes = [];
         this.animationId = null;
+        this._isRendering = false;
+        this._idleTimer = null;
 
-        // Guarda a referência da função de resize para poder removê-la depois
-        this._resizeHandler = () => this.forceResize();   // 👈 novo
+        this._resizeHandler = () => this.forceResize();
 
         this.setupLights();
         this.setupResizeHandler();
-        this.startAnimationLoop();
+        this.setupSmartRendering();
     }
 
     setupLights() {
@@ -143,10 +145,9 @@ export class ThreeSceneManager {
     }
 
     setupResizeHandler() {
-        window.addEventListener('resize', this._resizeHandler);   // 👈 usa a referência guardada
+        window.addEventListener('resize', this._resizeHandler);
     }
 
-    // Método público para forçar o redimensionamento (útil no modo comparação)
     forceResize() {
         if (!this.container) return;
         const width = this.container.clientWidth;
@@ -157,13 +158,62 @@ export class ThreeSceneManager {
         this.renderer.setSize(width, height);
     }
 
-    startAnimationLoop() {
-        const animate = () => {
-            this.animationId = requestAnimationFrame(animate);
-            this.controls.update();
-            this.renderer.render(this.scene, this.camera);
+    // Renderização sob demanda: loop pausado até interação ou autoRotate
+    setupSmartRendering() {
+        const startLoop = () => {
+            if (!this._isRendering) {
+                this._isRendering = true;
+                this._animate();
+            }
         };
-        animate();
+
+        const stopLoopAfterIdle = () => {
+            // Só para se autoRotate estiver desligado
+            if (this.controls.autoRotate) return;
+            if (this._idleTimer) clearTimeout(this._idleTimer);
+            this._idleTimer = setTimeout(() => {
+                if (!this.controls.autoRotate) {
+                    this._isRendering = false;
+                }
+            }, 2000); // 2s após última interação
+        };
+
+        this.controls.addEventListener('start', startLoop);
+        this.controls.addEventListener('end', stopLoopAfterIdle);
+        // Também inicia ao ativar autoRotate
+        this._autoRotateObserver = () => {
+            if (this.controls.autoRotate) startLoop();
+            else stopLoopAfterIdle();
+        };
+        // Inicialmente parado se nada acontecer
+        this._idleTimer = setTimeout(() => {
+            if (!this.controls.autoRotate) this._isRendering = false;
+        }, 2000);
+    }
+
+    _animate() {
+        if (!this._isRendering) {
+            if (this.animationId) {
+                cancelAnimationFrame(this.animationId);
+                this.animationId = null;
+            }
+            return;
+        }
+        this.animationId = requestAnimationFrame(() => this._animate());
+        this.controls.update();
+        this.renderer.render(this.scene, this.camera);
+    }
+
+    // Início manual do loop (usado ao ativar autoRotate programaticamente)
+    startRenderLoop() {
+        if (!this._isRendering) {
+            this._isRendering = true;
+            this._animate();
+        }
+    }
+
+    stopRenderLoop() {
+        this._isRendering = false;
     }
 
     loadModel(url, organelasList = [], cellId = 'unknown', cellType = 'Animalia') {
@@ -214,7 +264,6 @@ export class ThreeSceneManager {
             }
         });
 
-        // Mapeamento flexível com includes() e case insensitive
         organelasList.forEach(org => {
             const names = [];
             const target = org.mesh_name.toLowerCase();
@@ -324,11 +373,10 @@ export class ThreeSceneManager {
                 if (child.material) {
                     const materials = Array.isArray(child.material) ? child.material : [child.material];
                     materials.forEach(mat => {
-                        // Libera texturas associadas (map, normalMap, etc.) se existirem
                         for (const key in mat) {
                             const value = mat[key];
                             if (value && value.isTexture) {
-                                value.dispose();        // 👈 evita vazamento futuro de texturas
+                                value.dispose();
                             }
                         }
                         mat.dispose();
@@ -338,13 +386,25 @@ export class ThreeSceneManager {
         });
     }
 
+    // Limpa a cena removendo o modelo atual sem destruir o renderer (para reciclagem)
+    clearScene() {
+        if (this.currentModel) {
+            this.scene.remove(this.currentModel);
+            this.disposeModel(this.currentModel);
+            this.currentModel = null;
+        }
+        this.meshesMap.clear();
+        this.organelleMeshMap.clear();
+        this.clippingPlanes = [];
+    }
+
     applyClippingPlanesToModel(model) {
         model.traverse((child) => {
             if (child.isMesh && child.material) {
                 const materials = Array.isArray(child.material) ? child.material : [child.material];
                 materials.forEach(mat => {
                     mat.clippingPlanes = this.clippingPlanes;
-                    mat.needsUpdate = true;   // Garante recompilação do shader após alterar planos de corte
+                    mat.needsUpdate = true;
                 });
             }
         });
@@ -383,6 +443,11 @@ export class ThreeSceneManager {
 
     enableAutoRotate(enable) {
         this.controls.autoRotate = enable;
+        if (enable) {
+            this.startRenderLoop();
+        } else {
+            // O smart rendering já vai parar após idle
+        }
     }
 
     resetCamera() {
@@ -402,8 +467,10 @@ export class ThreeSceneManager {
 
     dispose() {
         if (this.animationId) cancelAnimationFrame(this.animationId);
+        this._isRendering = false;
+        if (this._idleTimer) clearTimeout(this._idleTimer);
         if (this._resizeHandler) {
-            window.removeEventListener('resize', this._resizeHandler);   // 👈 remove o listener de resize
+            window.removeEventListener('resize', this._resizeHandler);
         }
         if (this.currentModel) {
             this.disposeModel(this.currentModel);
@@ -411,7 +478,7 @@ export class ThreeSceneManager {
         }
         this.renderer.dispose();
         this.controls.dispose();
-        if (this.container.contains(this.renderer.domElement)) {
+        if (this.container && this.renderer.domElement && this.container.contains(this.renderer.domElement)) {
             this.container.removeChild(this.renderer.domElement);
         }
     }

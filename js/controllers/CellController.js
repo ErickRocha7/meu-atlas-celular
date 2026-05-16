@@ -3,6 +3,7 @@ import { ThreeSceneManager } from '../three-scene.js';
 import * as UIController from './UIController.js';
 
 let currentLoadToken = 0;
+let currentAbortController = null;
 
 export function initMainScene() {
     const container = document.getElementById('canvas-container');
@@ -43,6 +44,13 @@ function populateCellList() {
 }
 
 export async function loadCell(cell) {
+    // Cancela qualquer carregamento anterior
+    if (currentAbortController) {
+        currentAbortController.abort();
+    }
+    currentAbortController = new AbortController();
+    const signal = currentAbortController.signal;
+
     const token = ++currentLoadToken;
     AppState.currentCell = cell;
 
@@ -52,12 +60,18 @@ export async function loadCell(cell) {
     UIController.updateOrganelleDesc('');
 
     const scene = AppState.mainScene;
-    UIController.showLoading();   // 👈 Mostra loader
+    UIController.showLoading();
 
     try {
+        // Verifica se o carregamento não foi abortado antes de começar
+        if (signal.aborted) {
+            UIController.hideLoading();
+            return;
+        }
+
         const result = await scene.loadModel(cell.arquivo_3d, cell.organelas, cell.id, cell.categoria);
-        if (token !== currentLoadToken) {
-            console.debug('Load descartado por race condition');
+        if (token !== currentLoadToken || signal.aborted) {
+            console.debug('Load descartado por race condition ou abort');
             UIController.hideLoading();
             return;
         }
@@ -76,8 +90,13 @@ export async function loadCell(cell) {
         UIController.updateOrganelleDesc('');
         if (AppState.isAutoRotateActive) scene.enableAutoRotate(true);
     } catch (err) {
-        console.error('Erro ao carregar modelo:', err);
+        if (err.name === 'AbortError') {
+            console.debug('Carregamento abortado');
+        } else {
+            console.error('Erro ao carregar modelo:', err);
+        }
     } finally {
-        UIController.hideLoading();   // 👈 Esconde loader em qualquer caso
+        UIController.hideLoading();
+        currentAbortController = null;
     }
 }

@@ -1,27 +1,35 @@
-import { AppState } from '../state.js';
+import { AppState, CompareState } from '../state.js';
 import { ThreeSceneManager } from '../three-scene.js';
 import * as UIController from './UIController.js';
 import { loadCell } from './CellController.js';
 
-const tokens = { left: 0, right: 0 };  // 👈 Objeto simples em vez de eval
+// Inicialização lazy das cenas de comparação (reutilização de contextos WebGL)
+async function ensureCompareScenes() {
+    if (!CompareState.leftScene) {
+        CompareState.leftScene = new ThreeSceneManager('canvas-left');
+    }
+    if (!CompareState.rightScene) {
+        CompareState.rightScene = new ThreeSceneManager('canvas-right');
+    }
+    // Garante que o tamanho esteja correto após a view ser exibida
+    CompareState.leftScene.forceResize();
+    CompareState.rightScene.forceResize();
+}
 
 export async function enterCompareMode() {
     const dom = UIController.getDOM();
     if (!dom.compareView) return;
 
-    await cleanupComparison();
+    // Limpa modelos anteriores sem destruir cenas
+    await cleanupComparisonModels();
 
     AppState.mode = 'compare';
     UIController.setCompareViewVisible(true);
 
     try {
-        AppState.leftScene = new ThreeSceneManager('canvas-left');
-        AppState.rightScene = new ThreeSceneManager('canvas-right');
-        // Garantir que as cenas tenham o tamanho correto após exibição
-        AppState.leftScene.forceResize();
-        AppState.rightScene.forceResize();
+        await ensureCompareScenes();
     } catch (e) {
-        console.error('Falha ao criar cenas de comparação', e);
+        console.error('Falha ao criar/redimensionar cenas de comparação', e);
         return;
     }
 
@@ -61,50 +69,59 @@ export async function enterCompareMode() {
 
     dom.compareLeftSelect.addEventListener('change', leftSelectHandler);
     dom.compareRightSelect.addEventListener('change', rightSelectHandler);
-    AppState._listeners.leftSelect = leftSelectHandler;
-    AppState._listeners.rightSelect = rightSelectHandler;
+    CompareState._listeners.leftSelect = leftSelectHandler;
+    CompareState._listeners.rightSelect = rightSelectHandler;
 
     setupCameraSync();
 }
 
 async function loadCompareModel(side, cell) {
-    tokens[side]++;   // 👈 Incremento direto
-    const token = tokens[side];
-    const scene = side === 'left' ? AppState.leftScene : AppState.rightScene;
+    // Aborta carregamento anterior do mesmo lado
+    if (CompareState[`${side}AbortController`]) {
+        CompareState[`${side}AbortController`].abort();
+    }
+    const abortController = new AbortController();
+    CompareState[`${side}AbortController`] = abortController;
+
+    CompareState.tokens[side]++;
+    const token = CompareState.tokens[side];
+    const scene = side === 'left' ? CompareState.leftScene : CompareState.rightScene;
+
+    if (abortController.signal.aborted) return;
 
     const result = await scene.loadModel(cell.arquivo_3d, cell.organelas, cell.id, cell.categoria);
-    if (token !== tokens[side]) {
-        console.debug(`Load descartado para ${side} por race condition`);
+    if (token !== CompareState.tokens[side] || abortController.signal.aborted) {
+        console.debug(`Load descartado para ${side} por race condition ou abort`);
         return;
     }
 }
 
 function setupCameraSync() {
     const dom = UIController.getDOM();
-    const leftScene = AppState.leftScene;
-    const rightScene = AppState.rightScene;
+    const leftScene = CompareState.leftScene;
+    const rightScene = CompareState.rightScene;
 
     const removeChangeListeners = () => {
-        if (AppState._listeners.leftChange && leftScene) {
-            leftScene.controls.removeEventListener('change', AppState._listeners.leftChange);
-            AppState._listeners.leftChange = null;
+        if (CompareState._listeners.leftChange && leftScene) {
+            leftScene.controls.removeEventListener('change', CompareState._listeners.leftChange);
+            CompareState._listeners.leftChange = null;
         }
-        if (AppState._listeners.rightChange && rightScene) {
-            rightScene.controls.removeEventListener('change', AppState._listeners.rightChange);
-            AppState._listeners.rightChange = null;
+        if (CompareState._listeners.rightChange && rightScene) {
+            rightScene.controls.removeEventListener('change', CompareState._listeners.rightChange);
+            CompareState._listeners.rightChange = null;
         }
     };
     removeChangeListeners();
 
     const leftChange = () => {
-        if (AppState.leftSyncActive && rightScene && leftScene) {
+        if (CompareState.leftSyncActive && rightScene && leftScene) {
             rightScene.camera.position.copy(leftScene.camera.position);
             rightScene.controls.target.copy(leftScene.controls.target);
             rightScene.controls.update();
         }
     };
     const rightChange = () => {
-        if (AppState.rightSyncActive && leftScene && rightScene) {
+        if (CompareState.rightSyncActive && leftScene && rightScene) {
             leftScene.camera.position.copy(rightScene.camera.position);
             leftScene.controls.target.copy(rightScene.controls.target);
             leftScene.controls.update();
@@ -113,80 +130,83 @@ function setupCameraSync() {
 
     leftScene.controls.addEventListener('change', leftChange);
     rightScene.controls.addEventListener('change', rightChange);
-    AppState._listeners.leftChange = leftChange;
-    AppState._listeners.rightChange = rightChange;
+    CompareState._listeners.leftChange = leftChange;
+    CompareState._listeners.rightChange = rightChange;
 
     if (dom.btnSyncLeft) {
-        if (AppState._listeners.syncLeftClick) dom.btnSyncLeft.removeEventListener('click', AppState._listeners.syncLeftClick);
+        if (CompareState._listeners.syncLeftClick) dom.btnSyncLeft.removeEventListener('click', CompareState._listeners.syncLeftClick);
         const handler = () => {
-            AppState.leftSyncActive = !AppState.leftSyncActive;
-            AppState.rightSyncActive = false;
-            dom.btnSyncLeft.classList.toggle('active', AppState.leftSyncActive);
+            CompareState.leftSyncActive = !CompareState.leftSyncActive;
+            CompareState.rightSyncActive = false;
+            dom.btnSyncLeft.classList.toggle('active', CompareState.leftSyncActive);
             dom.btnSyncRight.classList.remove('active');
         };
         dom.btnSyncLeft.addEventListener('click', handler);
-        AppState._listeners.syncLeftClick = handler;
+        CompareState._listeners.syncLeftClick = handler;
     }
     if (dom.btnSyncRight) {
-        if (AppState._listeners.syncRightClick) dom.btnSyncRight.removeEventListener('click', AppState._listeners.syncRightClick);
+        if (CompareState._listeners.syncRightClick) dom.btnSyncRight.removeEventListener('click', CompareState._listeners.syncRightClick);
         const handler = () => {
-            AppState.rightSyncActive = !AppState.rightSyncActive;
-            AppState.leftSyncActive = false;
-            dom.btnSyncRight.classList.toggle('active', AppState.rightSyncActive);
+            CompareState.rightSyncActive = !CompareState.rightSyncActive;
+            CompareState.leftSyncActive = false;
+            dom.btnSyncRight.classList.toggle('active', CompareState.rightSyncActive);
             dom.btnSyncLeft.classList.remove('active');
         };
         dom.btnSyncRight.addEventListener('click', handler);
-        AppState._listeners.syncRightClick = handler;
+        CompareState._listeners.syncRightClick = handler;
     }
 }
 
-export async function cleanupComparison() {
+// Limpa apenas os modelos das cenas de comparação, sem destruir o renderer
+async function cleanupComparisonModels() {
     const dom = UIController.getDOM();
 
-    if (dom.compareLeftSelect && AppState._listeners.leftSelect) {
-        dom.compareLeftSelect.removeEventListener('change', AppState._listeners.leftSelect);
-        AppState._listeners.leftSelect = null;
+    // Remove listeners de seletores
+    if (dom.compareLeftSelect && CompareState._listeners.leftSelect) {
+        dom.compareLeftSelect.removeEventListener('change', CompareState._listeners.leftSelect);
+        CompareState._listeners.leftSelect = null;
     }
-    if (dom.compareRightSelect && AppState._listeners.rightSelect) {
-        dom.compareRightSelect.removeEventListener('change', AppState._listeners.rightSelect);
-        AppState._listeners.rightSelect = null;
+    if (dom.compareRightSelect && CompareState._listeners.rightSelect) {
+        dom.compareRightSelect.removeEventListener('change', CompareState._listeners.rightSelect);
+        CompareState._listeners.rightSelect = null;
     }
 
+    // Remove listeners de sincronia de câmera
     const removeChange = (scene, listenerKey) => {
-        if (scene && AppState._listeners[listenerKey]) {
-            scene.controls.removeEventListener('change', AppState._listeners[listenerKey]);
-            AppState._listeners[listenerKey] = null;
+        if (scene && CompareState._listeners[listenerKey]) {
+            scene.controls.removeEventListener('change', CompareState._listeners[listenerKey]);
+            CompareState._listeners[listenerKey] = null;
         }
     };
-    removeChange(AppState.leftScene, 'leftChange');
-    removeChange(AppState.rightScene, 'rightChange');
+    removeChange(CompareState.leftScene, 'leftChange');
+    removeChange(CompareState.rightScene, 'rightChange');
 
-    if (dom.btnSyncLeft && AppState._listeners.syncLeftClick) {
-        dom.btnSyncLeft.removeEventListener('click', AppState._listeners.syncLeftClick);
-        AppState._listeners.syncLeftClick = null;
+    if (dom.btnSyncLeft && CompareState._listeners.syncLeftClick) {
+        dom.btnSyncLeft.removeEventListener('click', CompareState._listeners.syncLeftClick);
+        CompareState._listeners.syncLeftClick = null;
     }
-    if (dom.btnSyncRight && AppState._listeners.syncRightClick) {
-        dom.btnSyncRight.removeEventListener('click', AppState._listeners.syncRightClick);
-        AppState._listeners.syncRightClick = null;
-    }
-
-    if (AppState.leftScene) {
-        AppState.leftScene.dispose();
-        AppState.leftScene = null;
-    }
-    if (AppState.rightScene) {
-        AppState.rightScene.dispose();
-        AppState.rightScene = null;
+    if (dom.btnSyncRight && CompareState._listeners.syncRightClick) {
+        dom.btnSyncRight.removeEventListener('click', CompareState._listeners.syncRightClick);
+        CompareState._listeners.syncRightClick = null;
     }
 
-    AppState.leftSyncActive = false;
-    AppState.rightSyncActive = false;
+    // Limpa modelos (não destrói cenas)
+    if (CompareState.leftScene) {
+        CompareState.leftScene.clearScene();
+    }
+    if (CompareState.rightScene) {
+        CompareState.rightScene.clearScene();
+    }
+
+    // Reseta flags de sincronia
+    CompareState.leftSyncActive = false;
+    CompareState.rightSyncActive = false;
     if (dom.btnSyncLeft) dom.btnSyncLeft.classList.remove('active');
     if (dom.btnSyncRight) dom.btnSyncRight.classList.remove('active');
 }
 
 export async function exitCompareMode() {
-    await cleanupComparison();
+    await cleanupComparisonModels();
     UIController.setCompareViewVisible(false);
     AppState.mode = 'single';
 

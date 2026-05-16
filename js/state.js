@@ -1,34 +1,34 @@
-// Centraliza o estado da aplicação, permitindo acesso único e consistente.
+// Centraliza o estado principal da aplicação (modo single)
 export const AppState = {
-    // Dados
     celulasData: [],
     currentCell: null,
-
-    // Cena principal
     mainScene: null,
-
-    // Flags de UI
     isCrossSectionActive: false,
     isAutoRotateActive: false,
+    mode: 'single', // 'single' | 'compare'
+};
 
-    // Modo atual: 'single' | 'compare'
-    mode: 'single',
-
-    // Comparação (gerenciado pelo CompareController)
+// Estado exclusivo do modo de comparação
+export const CompareState = {
     leftScene: null,
     rightScene: null,
     leftSyncActive: false,
     rightSyncActive: false,
-
-    // Handlers de eventos mantidos para limpeza
+    tokens: { left: 0, right: 0 },
+    leftAbortController: null,
+    rightAbortController: null,
     _listeners: {
         leftChange: null,
         rightChange: null,
         leftSelect: null,
         rightSelect: null,
         syncLeftClick: null,
-        syncRightClick: null,
-        mobileLeft: null,
-        canvasClick: null
+        syncRightClick: null
     }
+};
+
+// Listeners globais mantidos para limpeza (mobile menu, etc.)
+export const GlobalListeners = {
+    mobileLeft: null,
+    canvasClick: null
 };
