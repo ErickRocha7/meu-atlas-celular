@@ -180,15 +180,9 @@ export class ThreeSceneManager {
 
         this.controls.addEventListener('start', startLoop);
         this.controls.addEventListener('end', stopLoopAfterIdle);
-        // Também inicia ao ativar autoRotate
-        this._autoRotateObserver = () => {
-            if (this.controls.autoRotate) startLoop();
-            else stopLoopAfterIdle();
-        };
-        // Inicialmente parado se nada acontecer
-        this._idleTimer = setTimeout(() => {
-            if (!this.controls.autoRotate) this._isRendering = false;
-        }, 2000);
+        
+        // NOTA: Removemos o timer inicial que desligava o loop antes do primeiro modelo.
+        // O loop será ativado pelo loadModel via startRenderLoop().
     }
 
     _animate() {
@@ -233,6 +227,17 @@ export class ThreeSceneManager {
                     this.isFallback = false;
                     this._processGLTFModel(organelasList);
                     this.scene.add(this.currentModel);
+                    
+                    // =========================================================
+                    // 🔥 CORREÇÃO DEFINITIVA: renderização imediata + loop ativo
+                    // =========================================================
+                    this.forceResize();                       // garante dimensões corretas
+                    this.renderer.render(this.scene, this.camera);  // primeiro frame
+                    if (!this._isRendering) {
+                        this.startRenderLoop();               // mantém interatividade
+                    }
+                    // =========================================================
+                    
                     if (this.clippingPlanes.length > 0) this.applyClippingPlanesToModel(this.currentModel);
                     resolve({ usedFallback: false });
                 },
@@ -244,6 +249,12 @@ export class ThreeSceneManager {
                     this.isFallback = true;
                     this._processFallbackOrganelleMap(organelasList);
                     this.scene.add(this.currentModel);
+                    
+                    // Mesma correção para o fallback
+                    this.forceResize();
+                    this.renderer.render(this.scene, this.camera);
+                    if (!this._isRendering) this.startRenderLoop();
+                    
                     if (this.clippingPlanes.length > 0) this.applyClippingPlanesToModel(this.currentModel);
                     resolve({ usedFallback: true });
                 }
