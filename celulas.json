@@ -1,0 +1,56 @@
+{
+  "celulas": [
+    {
+      "id": "animal-cell",
+      "nome": "Animal Cell",
+      "tipo": "Eukaryotic Cell",
+      "categoria": "Animalia",
+      "arquivo_3d": "./assets/models/animal_cell.glb",
+      "imagens_microscopio": {
+        "light": "./assets/images/microscope/animal_light.jpg",
+        "stained": "./assets/images/microscope/animal_stained.jpg",
+        "electron": "./assets/images/microscope/animal_electron.jpg"
+      },
+      "organelas": [
+        {
+          "id": "nucleus",
+          "nome": "Núcleo",
+          "descricao": "Contém o material genético (DNA) e coordena as atividades celulares.",
+          "mesh_name": "Cube001_Nucleus"
+        },
+        {
+          "id": "mitochondria",
+          "nome": "Mitocôndria",
+          "descricao": "Responsável pela respiração celular e produção de energia (ATP).",
+          "mesh_name": "Cylinder_Mito"
+        }
+      ]
+    },
+    {
+      "id": "plant-cell",
+      "nome": "Plant Cell",
+      "tipo": "Eukaryotic Cell",
+      "categoria": "Plantae",
+      "arquivo_3d": "./assets/models/plant_cell.glb",
+      "imagens_microscopio": {
+        "light": "./assets/images/microscope/plant_light.jpg",
+        "stained": "./assets/images/microscope/plant_stained.jpg",
+        "electron": "./assets/images/microscope/plant_electron.jpg"
+      },
+      "organelas": [
+        {
+          "id": "chloroplast",
+          "nome": "Cloroplasto",
+          "descricao": "Organela responsável pela fotossíntese.",
+          "mesh_name": "Sphere_Chloroplast"
+        },
+        {
+          "id": "vacuole",
+          "nome": "Vacúolo Central",
+          "descricao": "Armazena água e mantém a pressão hidrostática.",
+          "mesh_name": "Cube_Vacuole"
+        }
+      ]
+    }
+  ]
+}

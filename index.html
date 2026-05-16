@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Cell Atlas 3D - Educational Interactive</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Layout principal 3 colunas -->
+    <div class="app-container">
+        <!-- Sidebar Esquerda: Tipos de Células -->
+        <aside class="sidebar-left">
+            <div class="sidebar-header">
+                <h2>📚 CELL ATLAS</h2>
+                <button id="mobile-menu-left" class="mobile-menu-btn">☰</button>
+            </div>
+            <ul id="cell-list">
+                <!-- Preenchido dinamicamente via JS -->
+            </ul>
+        </aside>
+
+        <!-- Área Central: Visualizador 3D -->
+        <main class="main-content">
+            <header class="cell-header">
+                <h1 id="current-cell-name">Animal Cell</h1>
+                <p id="current-cell-type">Eukaryotic Cell</p>
+            </header>
+            <div id="canvas-container" class="canvas-container"></div>
+        </main>
+
+        <!-- Sidebar Direita: Controles e Informações -->
+        <aside class="sidebar-right">
+            <div class="control-box">
+                <h3>🔧 VIEW MODE</h3>
+                <div class="toggle-row">
+                    <label for="cross-section">Cross Section</label>
+                    <input type="checkbox" id="cross-section">
+                </div>
+            </div>
+
+            <div class="control-box">
+                <h3>🎮 ACTIONS</h3>
+                <button id="btn-rotate" class="btn">↻ Rotate (Auto)</button>
+                <button id="btn-isolate" class="btn">🔍 Isolate Organelle</button>
+                <button id="btn-reset" class="btn">⟲ Reset View</button>
+                <button id="btn-glb" class="btn btn-download">💾 Download GLB</button>
+                <button id="btn-compare" class="btn btn-compare">🔬 Compare Cells</button>
+            </div>
+
+            <div class="control-box">
+                <h3>🔬 MICROSCOPY</h3>
+                <div class="microscope-gallery" id="microscope-gallery">
+                    <img id="micro-light" alt="Light microscopy">
+                    <img id="micro-stained" alt="Stained">
+                    <img id="micro-electron" alt="Electron microscopy">
+                </div>
+            </div>
+
+            <div class="control-box">
+                <h3>🧬 ORGANELLES</h3>
+                <select id="organelle-select">
+                    <option value="">Select an organelle...</option>
+                </select>
+                <p id="organelle-desc" class="desc-text"></p>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Modo de Comparação (inicialmente oculto) -->
+    <div id="compare-view" style="display: none;">
+        <div class="compare-container">
+            <div class="compare-pane left-pane">
+                <div class="pane-header">
+                    <select id="compare-left-select" class="compare-select"></select>
+                    <button class="sync-cam-btn" data-side="left">🔗 Sync Left</button>
+                </div>
+                <div id="canvas-left" class="compare-canvas"></div>
+            </div>
+            <div class="compare-pane right-pane">
+                <div class="pane-header">
+                    <select id="compare-right-select" class="compare-select"></select>
+                    <button class="sync-cam-btn" data-side="right">🔗 Sync Right</button>
+                </div>
+                <div id="canvas-right" class="compare-canvas"></div>
+            </div>
+        </div>
+        <button id="exit-compare" class="exit-compare-btn">✖ Exit Comparison</button>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
