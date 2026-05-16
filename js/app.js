@@ -60,7 +60,30 @@ let mobileLeftListener = null;
 let canvasClickListener = null;
 
 // --------------------------------------------------------------
-// 2. Inicialização principal
+// 2. Função auxiliar para fallback de imagens
+// --------------------------------------------------------------
+function setImageWithFallback(imgElement, src, alt = 'Microscopy image') {
+    if (!imgElement) return;
+    imgElement.alt = alt;
+    // Se não houver src ou src vazio, já aplica placeholder
+    if (!src) {
+        applyPlaceholder(imgElement);
+        return;
+    }
+    imgElement.src = src;
+    imgElement.onerror = () => applyPlaceholder(imgElement);
+}
+
+function applyPlaceholder(imgElement) {
+    // Cria um placeholder SVG elegante com gradiente e ícone
+    const placeholderSvg = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23cbd5e1'/%3E%3Ctext x='50' y='55' text-anchor='middle' fill='%235a6e7c' font-size='12' font-family='monospace'%3E🔬 No Asset%3C/text%3E%3C/svg%3E`;
+    imgElement.src = placeholderSvg;
+    imgElement.style.objectFit = 'contain';
+    imgElement.style.background = 'none'; // evita duplicação visual
+}
+
+// --------------------------------------------------------------
+// 3. Inicialização principal
 // --------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', async () => {
     // Preenche cache DOM
@@ -121,7 +144,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // --------------------------------------------------------------
-// 3. Funções auxiliares (população, loadCell)
+// 4. Funções auxiliares (população, loadCell)
 // --------------------------------------------------------------
 function populateCellList() {
     if (!dom.cellList) return;
@@ -154,20 +177,16 @@ async function loadCell(cell) {
     if (dom.currentCellName) dom.currentCellName.innerText = cell.nome;
     if (dom.currentCellType) dom.currentCellType.innerText = cell.tipo;
 
-    // Atualiza imagens de microscopia
+    // Atualiza imagens de microscopia com fallback elegante
     if (cell.imagens_microscopio) {
-        if (dom.microLight) {
-            dom.microLight.src = cell.imagens_microscopio.light || '';
-            dom.microLight.style.display = cell.imagens_microscopio.light ? 'block' : 'none';
-        }
-        if (dom.microStained) {
-            dom.microStained.src = cell.imagens_microscopio.stained || '';
-            dom.microStained.style.display = cell.imagens_microscopio.stained ? 'block' : 'none';
-        }
-        if (dom.microElectron) {
-            dom.microElectron.src = cell.imagens_microscopio.electron || '';
-            dom.microElectron.style.display = cell.imagens_microscopio.electron ? 'block' : 'none';
-        }
+        setImageWithFallback(dom.microLight, cell.imagens_microscopio.light, 'Light microscopy');
+        setImageWithFallback(dom.microStained, cell.imagens_microscopio.stained, 'Stained sample');
+        setImageWithFallback(dom.microElectron, cell.imagens_microscopio.electron, 'Electron microscopy');
+    } else {
+        // Se não houver imagens no JSON, aplica placeholder diretamente
+        setImageWithFallback(dom.microLight, null, 'Light microscopy');
+        setImageWithFallback(dom.microStained, null, 'Stained sample');
+        setImageWithFallback(dom.microElectron, null, 'Electron microscopy');
     }
 
     // Popula dropdown de organelas
@@ -186,7 +205,8 @@ async function loadCell(cell) {
 
     // Carrega modelo 3D com verificação de token
     try {
-        const model = await threeScene.loadModel(cell.arquivo_3d, cell.organelas);
+        // Passando cell.categoria como quarto parâmetro (cellType)
+        await threeScene.loadModel(cell.arquivo_3d, cell.organelas, cell.id, cell.categoria);
         if (thisLoadToken !== currentLoadToken) {
             // Um load mais recente já começou, descarta este
             console.debug('Load model descartado por race condition');
@@ -200,7 +220,7 @@ async function loadCell(cell) {
 }
 
 // --------------------------------------------------------------
-// 4. Anexar event listeners principais (com checagem nula)
+// 5. Anexar event listeners principais (com checagem nula)
 // --------------------------------------------------------------
 function attachEventListeners() {
     if (dom.crossSectionToggle) {
@@ -273,7 +293,7 @@ function attachEventListeners() {
 }
 
 // --------------------------------------------------------------
-// 5. Modo comparação (com limpeza completa)
+// 6. Modo comparação (com limpeza completa)
 // --------------------------------------------------------------
 async function enterCompareMode() {
     if (!dom.compareView || !dom.canvasContainer) return;
@@ -315,8 +335,8 @@ async function enterCompareMode() {
     const rightCell = celulasData.find(c => c.id === rightDefaultId);
 
     await Promise.all([
-        leftScene.loadModel(leftCell.arquivo_3d, leftCell.organelas),
-        rightScene.loadModel(rightCell.arquivo_3d, rightCell.organelas)
+        leftScene.loadModel(leftCell.arquivo_3d, leftCell.organelas, leftCell.id, leftCell.categoria),
+        rightScene.loadModel(rightCell.arquivo_3d, rightCell.organelas, rightCell.id, rightCell.categoria)
     ]);
 
     // Handlers dos selects (já com limpeza)
@@ -325,11 +345,11 @@ async function enterCompareMode() {
 
     leftSelectHandler = async (e) => {
         const cell = celulasData.find(c => c.id === e.target.value);
-        if (cell && leftScene) await leftScene.loadModel(cell.arquivo_3d, cell.organelas);
+        if (cell && leftScene) await leftScene.loadModel(cell.arquivo_3d, cell.organelas, cell.id, cell.categoria);
     };
     rightSelectHandler = async (e) => {
         const cell = celulasData.find(c => c.id === e.target.value);
-        if (cell && rightScene) await rightScene.loadModel(cell.arquivo_3d, cell.organelas);
+        if (cell && rightScene) await rightScene.loadModel(cell.arquivo_3d, cell.organelas, cell.id, cell.categoria);
     };
 
     dom.compareLeftSelect.addEventListener('change', leftSelectHandler);
@@ -422,7 +442,7 @@ function exitCompareMode(skipLayoutRestore = false) {
         dom.canvasContainer.style.display = 'flex'; // ou o estilo original
         // Recarrega modelo atual na cena principal
         if (currentCell && threeScene) {
-            threeScene.loadModel(currentCell.arquivo_3d, currentCell.organelas);
+            threeScene.loadModel(currentCell.arquivo_3d, currentCell.organelas, currentCell.id, currentCell.categoria);
             if (isCrossSectionActive) threeScene.enableCrossSection(true);
             threeScene.resetVisibility();
         }
@@ -430,7 +450,7 @@ function exitCompareMode(skipLayoutRestore = false) {
 }
 
 // --------------------------------------------------------------
-// 6. Menus mobile com remoção/adição defensiva de listeners
+// 7. Menus mobile com remoção/adição defensiva de listeners
 // --------------------------------------------------------------
 function setupMobileMenus() {
     if (!dom.mobileMenuLeft || !dom.sidebarLeft) return;

@@ -23,6 +23,36 @@
           "nome": "Mitocôndria",
           "descricao": "Responsável pela respiração celular e produção de energia (ATP).",
           "mesh_name": "Cylinder_Mito"
+        },
+        {
+          "id": "golgi",
+          "nome": "Complexo de Golgi",
+          "descricao": "Modifica, empacota e distribui proteínas e lipídios pela célula.",
+          "mesh_name": "Golgi_Mesh"
+        },
+        {
+          "id": "ribosome",
+          "nome": "Ribossomos",
+          "descricao": "Síntese de proteínas a partir do RNA mensageiro.",
+          "mesh_name": "Ribosome_Mesh"
+        },
+        {
+          "id": "lysosome",
+          "nome": "Lisossomos",
+          "descricao": "Digestão intracelular de macromoléculas e reciclagem de organelas.",
+          "mesh_name": "Lysosome_Mesh"
+        },
+        {
+          "id": "peroxisome",
+          "nome": "Peroxissomos",
+          "descricao": "Oxidação de ácidos graxos e detoxificação de peróxido de hidrogênio.",
+          "mesh_name": "Peroxisome_Mesh"
+        },
+        {
+          "id": "centriole",
+          "nome": "Centríolos",
+          "descricao": "Organização dos microtúbulos durante a divisão celular.",
+          "mesh_name": "Centriole_Mesh"
         }
       ]
     },
@@ -39,16 +69,46 @@
       },
       "organelas": [
         {
+          "id": "nucleus",
+          "nome": "Núcleo",
+          "descricao": "Contém o DNA e comanda as atividades celulares.",
+          "mesh_name": "Plant_Nucleus"
+        },
+        {
+          "id": "mitochondria",
+          "nome": "Mitocôndria",
+          "descricao": "Respiração celular e produção de energia (ATP).",
+          "mesh_name": "Plant_Mito"
+        },
+        {
           "id": "chloroplast",
           "nome": "Cloroplasto",
-          "descricao": "Organela responsável pela fotossíntese.",
+          "descricao": "Realiza a fotossíntese, convertendo luz em energia química.",
           "mesh_name": "Sphere_Chloroplast"
         },
         {
           "id": "vacuole",
           "nome": "Vacúolo Central",
-          "descricao": "Armazena água e mantém a pressão hidrostática.",
+          "descricao": "Armazena água, íons e mantém a pressão de turgescência.",
           "mesh_name": "Cube_Vacuole"
+        },
+        {
+          "id": "golgi",
+          "nome": "Complexo de Golgi",
+          "descricao": "Processamento e secreção de polissacarídeos e proteínas.",
+          "mesh_name": "Plant_Golgi"
+        },
+        {
+          "id": "ribosome",
+          "nome": "Ribossomos",
+          "descricao": "Síntese proteica (ocorrem no citoplasma e no RER).",
+          "mesh_name": "Plant_Ribosome"
+        },
+        {
+          "id": "peroxisome",
+          "nome": "Peroxissomos",
+          "descricao": "Oxidação de ácidos graxos e proteção contra espécies reativas.",
+          "mesh_name": "Plant_Peroxisome"
         }
       ]
     }

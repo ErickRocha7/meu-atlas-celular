@@ -217,9 +217,10 @@ body {
     width: 33%;
     border-radius: 8px;
     border: 1px solid var(--border);
-    background: #f1f5f9;
+    background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
     aspect-ratio: 1 / 1;
     object-fit: cover;
+    transition: opacity 0.2s ease;
 }
 
 #organelle-select {
