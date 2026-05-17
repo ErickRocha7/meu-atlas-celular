@@ -1,3 +1,4 @@
+// controllers/UIController.js
 const dom = {};
 
 function cacheDOM() {

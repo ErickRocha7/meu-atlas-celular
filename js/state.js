@@ -1,3 +1,4 @@
+// state.js
 export const AppState = {
     celulasData: [],
     currentCell: null,

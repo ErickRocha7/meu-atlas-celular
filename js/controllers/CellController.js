@@ -1,3 +1,4 @@
+// controllers/CellController.js
 import { AppState } from '../state.js';
 import { ThreeSceneManager } from '../three-scene.js';
 import * as UIController from './UIController.js';

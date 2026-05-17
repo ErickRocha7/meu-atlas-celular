@@ -1,3 +1,4 @@
+// field-extractor.js
 import * as THREE from 'three';
 import { MarchingCubes } from 'three/addons/objects/MarchingCubes.js';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';

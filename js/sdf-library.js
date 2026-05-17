@@ -1,3 +1,4 @@
+// sdf-library.js
 // Primitivas SDF e operadores booleanos suaves
 
 export function sdSphere(p, radius) {

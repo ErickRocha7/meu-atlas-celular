@@ -1,0 +1,56 @@
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.swp
+*.swo
+
+# IDE and editor files
+.vscode/
+.idea/
+*.sublime-*
+.project
+.classpath
+.settings/
+
+# Dependency directories (if any future npm use)
+node_modules/
+jspm_packages/
+bower_components/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.cache
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Build outputs (if any)
+dist/
+build/
+out/
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# Optional: ignore local asset files that are not part of repository
+assets/models/*.glb
+assets/images/microscope/*.jpg
+
+# Lock files (optional, keep if you prefer)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Misc
+*.bak
+*.old
+*.orig

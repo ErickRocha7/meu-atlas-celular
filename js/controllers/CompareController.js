@@ -1,3 +1,4 @@
+// controllers/CompareController.js
 import { AppState, CompareState } from '../state.js';
 import { ThreeSceneManager } from '../three-scene.js';
 import * as UIController from './UIController.js';

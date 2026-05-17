@@ -1,3 +1,4 @@
+// cell-layout-engine.js
 const ZONE_BOUNDS = {
     Animalia: {
         nuclear: { rMin: 0, rMax: 0.15 },
