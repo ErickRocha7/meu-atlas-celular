@@ -1,14 +1,12 @@
-// Centraliza o estado principal da aplicação (modo single)
 export const AppState = {
     celulasData: [],
     currentCell: null,
     mainScene: null,
     isCrossSectionActive: false,
     isAutoRotateActive: false,
-    mode: 'single', // 'single' | 'compare'
+    mode: 'single',
 };
 
-// Estado exclusivo do modo de comparação
 export const CompareState = {
     leftScene: null,
     rightScene: null,
@@ -27,7 +25,6 @@ export const CompareState = {
     }
 };
 
-// Listeners globais mantidos para limpeza (mobile menu, etc.)
 export const GlobalListeners = {
     mobileLeft: null,
     canvasClick: null

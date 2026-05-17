@@ -9,7 +9,6 @@
     --radius: 16px;
     --shadow: 0 8px 20px rgba(0,0,0,0.03), 0 2px 4px rgba(0,0,0,0.05);
 
-    /* Escala de z-index */
     --z-base: 1;
     --z-sidebar: 10;
     --z-sidebar-mobile: 200;
@@ -43,7 +42,6 @@ body {
     background: var(--bg-app);
 }
 
-/* Estilo comum para sidebars e main */
 .sidebar-left, .sidebar-right, .main-content {
     background: var(--bg-card);
     overflow-y: auto;
@@ -53,21 +51,18 @@ body {
 .sidebar-left {
     border-right: 1px solid var(--border);
     border-radius: 0 var(--radius) var(--radius) 0;
-    margin-right: 0;
     z-index: var(--z-sidebar);
 }
 
 .sidebar-right {
     border-left: 1px solid var(--border);
     border-radius: var(--radius) 0 0 var(--radius);
-    margin-left: 0;
     z-index: var(--z-sidebar);
 }
 
 .main-content {
     display: flex;
     flex-direction: column;
-    margin: 0;
     border-radius: 0;
 }
 
@@ -99,7 +94,6 @@ body {
     z-index: var(--z-base);
 }
 
-/* Canvas específico (não afeta outros <canvas> que possam existir) */
 .canvas-container canvas {
     width: 100%;
     height: 100%;
@@ -120,7 +114,6 @@ body {
     pointer-events: none;
 }
 
-/* Sidebar esquerda - lista de células */
 .sidebar-header {
     display: flex;
     justify-content: space-between;
@@ -177,7 +170,6 @@ body {
     color: var(--text-secondary);
 }
 
-/* Sidebar direita - controles */
 .control-box {
     padding: 20px 20px 0 20px;
     border-bottom: 1px solid var(--border);
@@ -274,7 +266,6 @@ body {
     line-height: 1.4;
 }
 
-/* Modo Comparação */
 #compare-view {
     position: fixed;
     top: 0;
@@ -358,7 +349,6 @@ body {
     background: #0f172a;
 }
 
-/* Overlay de carregamento (global) */
 .loading-overlay {
     position: fixed;
     top: 0;
@@ -386,7 +376,6 @@ body {
     to { transform: rotate(360deg); }
 }
 
-/* Responsividade */
 .mobile-menu-btn {
     display: none;
     background: none;
@@ -433,7 +422,6 @@ body {
     }
 }
 
-/* Garante que classes .open não afetem o layout em desktop */
 @media (min-width: 769px) {
     .sidebar-left.open,
     .sidebar-right.open {

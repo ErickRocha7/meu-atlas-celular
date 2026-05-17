@@ -44,7 +44,6 @@ function populateCellList() {
 }
 
 export async function loadCell(cell) {
-    // Cancela qualquer carregamento anterior
     if (currentAbortController) {
         currentAbortController.abort();
     }
@@ -63,7 +62,6 @@ export async function loadCell(cell) {
     UIController.showLoading();
 
     try {
-        // Verifica se o carregamento não foi abortado antes de começar
         if (signal.aborted) {
             UIController.hideLoading();
             return;

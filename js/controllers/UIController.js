@@ -116,7 +116,9 @@ function setImageWithFallback(imgElement, src, alt = 'Microscopy image') {
         applyPlaceholder(imgElement);
         return;
     }
-    imgElement.src = src;
+    // Codifica apenas se a URL ainda não estiver codificada (evita dupla codificação)
+    const sanitizedSrc = /%[0-9A-Fa-f]{2}/.test(src) ? src : encodeURI(src).replace(/#/g, '%23');
+    imgElement.src = sanitizedSrc;
     imgElement.onerror = () => applyPlaceholder(imgElement);
 }
 

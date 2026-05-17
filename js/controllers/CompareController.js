@@ -3,15 +3,17 @@ import { ThreeSceneManager } from '../three-scene.js';
 import * as UIController from './UIController.js';
 import { loadCell } from './CellController.js';
 
-// Inicialização lazy das cenas de comparação (reutilização de contextos WebGL)
 async function ensureCompareScenes() {
     if (!CompareState.leftScene) {
         CompareState.leftScene = new ThreeSceneManager('canvas-left');
+    } else {
+        CompareState.leftScene.clearScene();
     }
     if (!CompareState.rightScene) {
         CompareState.rightScene = new ThreeSceneManager('canvas-right');
+    } else {
+        CompareState.rightScene.clearScene();
     }
-    // Garante que o tamanho esteja correto após a view ser exibida
     CompareState.leftScene.forceResize();
     CompareState.rightScene.forceResize();
 }
@@ -20,7 +22,6 @@ export async function enterCompareMode() {
     const dom = UIController.getDOM();
     if (!dom.compareView) return;
 
-    // Limpa modelos anteriores sem destruir cenas
     await cleanupComparisonModels();
 
     AppState.mode = 'compare';
@@ -76,7 +77,6 @@ export async function enterCompareMode() {
 }
 
 async function loadCompareModel(side, cell) {
-    // Aborta carregamento anterior do mesmo lado
     if (CompareState[`${side}AbortController`]) {
         CompareState[`${side}AbortController`].abort();
     }
@@ -157,11 +157,9 @@ function setupCameraSync() {
     }
 }
 
-// Limpa apenas os modelos das cenas de comparação, sem destruir o renderer
 async function cleanupComparisonModels() {
     const dom = UIController.getDOM();
 
-    // Remove listeners de seletores
     if (dom.compareLeftSelect && CompareState._listeners.leftSelect) {
         dom.compareLeftSelect.removeEventListener('change', CompareState._listeners.leftSelect);
         CompareState._listeners.leftSelect = null;
@@ -171,7 +169,6 @@ async function cleanupComparisonModels() {
         CompareState._listeners.rightSelect = null;
     }
 
-    // Remove listeners de sincronia de câmera
     const removeChange = (scene, listenerKey) => {
         if (scene && CompareState._listeners[listenerKey]) {
             scene.controls.removeEventListener('change', CompareState._listeners[listenerKey]);
@@ -190,15 +187,16 @@ async function cleanupComparisonModels() {
         CompareState._listeners.syncRightClick = null;
     }
 
-    // Limpa modelos (não destrói cenas)
+    // Libera recursos das cenas de comparação
     if (CompareState.leftScene) {
-        CompareState.leftScene.clearScene();
+        CompareState.leftScene.dispose();
+        CompareState.leftScene = null;
     }
     if (CompareState.rightScene) {
-        CompareState.rightScene.clearScene();
+        CompareState.rightScene.dispose();
+        CompareState.rightScene = null;
     }
 
-    // Reseta flags de sincronia
     CompareState.leftSyncActive = false;
     CompareState.rightSyncActive = false;
     if (dom.btnSyncLeft) dom.btnSyncLeft.classList.remove('active');

@@ -8,25 +8,19 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- Overlay de carregamento global -->
     <div id="loading-overlay" class="loading-overlay" style="display: none;">
         <div class="spinner"></div>
     </div>
 
-    <!-- Layout principal 3 colunas -->
     <div class="app-container">
-        <!-- Sidebar Esquerda: Tipos de Células -->
         <aside class="sidebar-left">
             <div class="sidebar-header">
                 <h2>📚 CELL ATLAS</h2>
                 <button id="mobile-menu-left" class="mobile-menu-btn" aria-label="Abrir menu">☰</button>
             </div>
-            <ul id="cell-list">
-                <!-- Preenchido dinamicamente via JS -->
-            </ul>
+            <ul id="cell-list"></ul>
         </aside>
 
-        <!-- Área Central: Visualizador 3D -->
         <main class="main-content">
             <header class="cell-header">
                 <h1 id="current-cell-name">Animal Cell</h1>
@@ -37,7 +31,6 @@
             </div>
         </main>
 
-        <!-- Sidebar Direita: Controles e Informações -->
         <aside class="sidebar-right">
             <div class="control-box">
                 <h3>🔧 VIEW MODE</h3>
@@ -75,7 +68,6 @@
         </aside>
     </div>
 
-    <!-- Modo de Comparação (inicialmente oculto) -->
     <div id="compare-view" style="display: none;">
         <div class="compare-container">
             <div class="compare-pane left-pane">
@@ -96,7 +88,6 @@
         <button id="exit-compare" class="exit-compare-btn">✖ Exit Comparison</button>
     </div>
 
-    <!-- Import map para Three.js r157 -->
     <script type="importmap">
         {
             "imports": {
